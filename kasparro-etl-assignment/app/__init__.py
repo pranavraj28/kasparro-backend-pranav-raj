@@ -1,2 +1,0 @@
-"""Crypto ETL application."""
-
