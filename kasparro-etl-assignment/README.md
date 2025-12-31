@@ -6,7 +6,7 @@ Base URL:
 https://kasparro-backend-agwk.onrender.com
 
 Verification Endpoints:
-- Health Check: https://kasparro-backend-agwk.onrender.com/
+- Health Check: https://kasparro-backend-agwk.onrender.com/health
 - Unified Data API: https://kasparro-backend-agwk.onrender.com/data
 - Swagger API Docs: https://kasparro-backend-agwk.onrender.com/docs
 
