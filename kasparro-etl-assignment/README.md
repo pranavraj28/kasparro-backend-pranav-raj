@@ -1,412 +1,348 @@
-## 🚀 Live Public Cloud Deployment (Verified)
+# Kasparro Backend ETL Assignment - Pranav Raj
 
-The backend API is deployed on Render and is publicly accessible.
+## 🌐 Live Cloud Deployment
 
-Base URL:
-https://kasparro-backend-agwk.onrender.com
+**Production URL:** https://kasparro-backend-agwk.onrender.com  
+**Platform:** Render (Cloud PaaS)  
+**Status:** ✅ Live and Operational  
+**Deployment Date:** [Add your deployment date, e.g., December 28, 2025]
 
-Verification Endpoints:
-- Health Check: https://kasparro-backend-agwk.onrender.com/health
-- Unified Data API: https://kasparro-backend-agwk.onrender.com/data
-- Swagger API Docs: https://kasparro-backend-agwk.onrender.com/docs
+### 🔍 Quick Verification Endpoints
 
-This deployment is live, verifiable, and reproducible using Docker.
-# Crypto ETL System
+| Endpoint | URL | Description |
+|----------|-----|-------------|
+| **Health Check** | [/health](https://kasparro-backend-agwk.onrender.com/health) | System health and DB connectivity |
+| **Data API** | [/data](https://kasparro-backend-agwk.onrender.com/data) | Paginated crypto data with filters |
+| **Stats** | [/stats](https://kasparro-backend-agwk.onrender.com/stats) | ETL run statistics and metrics |
+| **API Docs** | [/docs](https://kasparro-backend-agwk.onrender.com/docs) | Interactive Swagger documentation |
 
-A production-ready ETL system for cryptocurrency data ingestion with checkpoint-based recovery, incremental processing, and comprehensive failure handling.
+### 🧪 Test Commands
+```bash
+# Health check
+curl https://kasparro-backend-agwk.onrender.com/health
 
-## Architecture Overview
+# Get paginated data
+curl "https://kasparro-backend-agwk.onrender.com/data?page=1&page_size=10"
 
-This system is designed with production reliability in mind. It follows a clean architecture pattern that separates concerns into distinct layers:
+# View ETL statistics
+curl https://kasparro-backend-agwk.onrender.com/stats
 
-- **API Layer**: FastAPI endpoints for data access, health checks, and statistics
-- **Ingestion Layer**: Pluggable source adapters (CoinPaprika, CoinGecko, CSV)
-- **Service Layer**: ETL orchestration with checkpoint management
-- **Core Layer**: Database models, configuration, and logging
-
-### Why This Architecture?
-
-1. **Separation of Concerns**: Each layer has a single responsibility, making the codebase maintainable and testable
-2. **Extensibility**: New data sources can be added by implementing the `IngestionSource` interface
-3. **Resilience**: Checkpoint-based recovery ensures data integrity even during failures
-4. **Observability**: Comprehensive logging and health endpoints for monitoring
-
-## Key Features
-
-### ✅ Incremental Ingestion (P0)
-- Checkpoint table tracks last processed record per source
-- Only processes new data on subsequent runs
-- Prevents duplicate processing and reduces API load
-
-### ✅ Failure Recovery (P1)
-- Checkpoints are **not updated** on failure, allowing clean resume
-- Failed runs can be restarted from the last successful checkpoint
-- No data corruption even if ETL crashes mid-run
-
-### ✅ Production-Ready APIs
-- `/data` - Paginated, filterable asset data with request metadata
-- `/health` - Database connectivity and ETL status
-- `/stats` - ETL run statistics and metrics
-
-### ✅ Failure Injection Testing (P2)
-- Environment variable `FAIL_AFTER_N_RECORDS` for controlled failure testing
-- Demonstrates recovery capabilities in real scenarios
-
-## Data Model
-
-### Raw Tables
-Store complete payloads from each source for auditability and reprocessing:
-- `raw_coinpaprika` - Full CoinPaprika API responses
-- `raw_coingecko` - Full CoinGecko API responses  
-- `raw_csv_source` - CSV file records
-
-### Unified Table
-Normalized asset data across all sources:
-```sql
-assets (
-  asset_id,
-  symbol,
-  name,
-  price_usd,
-  market_cap,
-  source,
-  updated_at
-)
+# Filter by source
+curl "https://kasparro-backend-agwk.onrender.com/data?source=coinpaprika&page_size=5"
 ```
 
-### Checkpoint Table
-Tracks ETL progress for recovery:
-```sql
-etl_checkpoints (
-  source,
-  last_processed_id,
-  last_processed_at,
-  status,
-  run_id
-)
+---
+
+## 📋 Table of Contents
+
+- [Architecture Overview](#architecture-overview)
+- [Features Implemented](#features-implemented)
+- [Local Setup](#local-setup)
+- [API Documentation](#api-documentation)
+- [Data Sources](#data-sources)
+- [ETL Pipeline](#etl-pipeline)
+- [Testing](#testing)
+- [Cloud Deployment](#cloud-deployment)
+
+---
+
+## 🏗️ Architecture Overview
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Data Sources                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ CoinPaprika  │  │  CoinGecko   │  │  CSV Files   │      │
+│  │     API      │  │     API      │  │              │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    ETL Pipeline                              │
+│  • Incremental ingestion with checkpointing                 │
+│  • Data validation (Pydantic schemas)                       │
+│  • Normalization & identity unification                     │
+│  • Error handling & retry logic                             │
+└─────────────────────────────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  PostgreSQL Database                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │  raw_data    │  │   assets     │  │ checkpoints  │      │
+│  │   tables     │  │  (unified)   │  │              │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    FastAPI Backend                           │
+│  • GET /health   • GET /data   • GET /stats                 │
+│  • Pagination    • Filtering   • Metadata                   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## How Incremental Ingestion Works
+---
 
-1. **First Run**: No checkpoint exists, processes all available data
-2. **Subsequent Runs**: 
-   - Reads `last_processed_id` from checkpoint
-   - Fetches only records after that ID (source-dependent)
-   - Updates checkpoint only after successful batch processing
-3. **On Failure**: Checkpoint remains at last successful point, allowing resume
+## ✅ Features Implemented
 
-## How Recovery Works
+### **P0 - Foundation Layer** ✅
+- ✅ **P0.1** - Data ingestion from 3 sources (CoinPaprika API, CoinGecko API, CSV)
+- ✅ **P0.2** - Backend API with `/data` and `/health` endpoints
+- ✅ **P0.3** - Fully Dockerized system with `make` commands
+- ✅ **P0.4** - Comprehensive test suite
 
-The checkpoint system ensures atomic progress tracking:
+### **P1 - Growth Layer** ✅
+- ✅ **P1.1** - Third data source (CoinGecko API)
+- ✅ **P1.2** - Checkpoint-based incremental ingestion
+- ✅ **P1.3** - `/stats` endpoint with ETL metadata
+- ✅ **P1.4** - Comprehensive test coverage
+- ✅ **P1.5** - Clean architecture with separation of concerns
 
-1. **Start Run**: Checkpoint status set to "running", new `run_id` generated
-2. **Process Batch**: 
-   - Save raw data → get ID
-   - Normalize and save to unified table
-   - **Only then** update checkpoint with new `last_processed_id`
-3. **On Success**: Status set to "completed"
-4. **On Failure**: Status set to "failed", but `last_processed_id` is **NOT rolled back**
+### **P2 - Differentiator Layer** (Partial)
+- ✅ **P2.2** - Checkpoint-based recovery on failures
+- ✅ **P2.3** - Rate limiting with exponential backoff
+- ✅ **P2.4** - Structured logging and observability
 
-This means:
-- ✅ Partial progress is preserved
-- ✅ Resume starts from last successful batch
-- ✅ No duplicate processing
-- ✅ No data loss
+---
 
-## Local Development
+## 🚀 Local Setup
 
 ### Prerequisites
-- Docker and Docker Compose
-- Make (optional, but recommended)
+- Docker & Docker Compose
+- Make
+- Git
 
 ### Quick Start
-
 ```bash
-# Start all services
+# Clone the repository
+git clone https://github.com/pranavraj28/kasparro-backend-pranav-raj.git
+cd kasparro-backend-pranav-raj
+
+# Start the system
 make up
 
-# Or manually:
-docker-compose up -d
-
-# Run tests
-make test
-
-# View logs
-make logs
-
-# Stop services
-make down
+# The API will be available at http://localhost:8000
+# API docs at http://localhost:8000/docs
 ```
 
-The API will be available at `http://localhost:8000`
-
-### Manual Setup (Without Docker)
-
+### Available Commands
 ```bash
-# Create virtual environment
-python3.11 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set up database (PostgreSQL required)
-export DATABASE_URL="postgresql://user:pass@localhost:5432/crypto_etl"
-
-# Run migrations
-alembic upgrade head
-
-# Start API
-uvicorn app.main:app --reload
+make up          # Start all services
+make down        # Stop all services
+make test        # Run test suite
+make logs        # View logs
+make restart     # Restart services
+make clean       # Clean up containers and volumes
 ```
 
-## Testing Failure Recovery
+---
 
-The system includes failure injection for testing recovery:
+## 📚 API Documentation
 
-```bash
-# Set environment variable
-export FAIL_AFTER_N_RECORDS=10
-
-# Start ETL - it will fail after processing 10 records
-docker-compose up
-
-# Check checkpoint (should show last_processed_id=10, status=failed)
-curl http://localhost:8000/stats
-
-# Remove failure injection and restart
-unset FAIL_AFTER_N_RECORDS
-docker-compose restart api
-
-# ETL will resume from record 11
-```
-
-## API Endpoints
-
-### GET /data
-Retrieve paginated asset data with filtering.
-
-**Query Parameters:**
-- `page` (int): Page number (default: 1)
-- `page_size` (int): Records per page (default: 50, max: 100)
-- `symbol` (string, optional): Filter by symbol (case-insensitive partial match)
-- `source` (string, optional): Filter by source name
-
-**Response:**
-```json
-{
-  "request_id": "uuid",
-  "api_latency_ms": 42.5,
-  "data": [...],
-  "total": 150,
-  "page": 1,
-  "page_size": 50
-}
-```
-
-### GET /health
-Health check with database and ETL status.
+### `GET /health`
+Returns system health status and database connectivity.
 
 **Response:**
 ```json
 {
   "status": "healthy",
-  "database": "healthy",
-  "etl": "healthy",
-  "timestamp": "2024-01-01T00:00:00Z"
+  "database": "connected",
+  "timestamp": "2025-12-31T12:00:00Z"
 }
 ```
 
-### GET /stats
-ETL statistics and run information.
+### `GET /data`
+Returns paginated cryptocurrency data.
+
+**Query Parameters:**
+- `page` (int, default: 1): Page number
+- `page_size` (int, default: 20): Items per page
+- `source` (string, optional): Filter by data source
+- `symbol` (string, optional): Filter by symbol
 
 **Response:**
 ```json
 {
-  "records_processed": 1000,
-  "last_success": "2024-01-01T12:00:00",
-  "last_failure": null,
-  "sources": {
-    "coinpaprika": {
-      "last_processed_id": 500,
-      "last_processed_at": "2024-01-01T12:00:00",
-      "status": "completed",
-      "run_id": "uuid"
-    }
+  "data": [...],
+  "metadata": {
+    "request_id": "uuid",
+    "api_latency_ms": 45,
+    "page": 1,
+    "page_size": 20,
+    "total": 500
   }
 }
 ```
 
-## Deployment
+### `GET /stats`
+Returns ETL statistics and metadata.
 
-> **⚠️ IMPORTANT**: Cloud deployment is required for submission. See `DEPLOYMENT_GUIDE.md` for detailed instructions.
+**Response:**
+```json
+{
+  "total_records": 1500,
+  "last_run": {
+    "timestamp": "2025-12-31T10:00:00Z",
+    "status": "success",
+    "duration_ms": 5432
+  },
+  "sources": {
+    "coinpaprika": 500,
+    "coingecko": 500,
+    "csv": 500
+  }
+}
+```
 
-### Quick Deployment Options
+---
 
-1. **AWS EC2** - See `DEPLOYMENT_GUIDE.md` for step-by-step instructions
-2. **GCP Compute Engine** - See `DEPLOYMENT_GUIDE.md` for step-by-step instructions  
-3. **Azure VM** - See `DEPLOYMENT_GUIDE.md` for step-by-step instructions
+## 🗃️ Data Sources
 
-### AWS EC2 Deployment
+### 1. CoinPaprika API
+- **Type:** REST API
+- **Authentication:** API Key
+- **Data:** Real-time cryptocurrency market data
+- **Rate Limit:** Handled with exponential backoff
 
-1. **Launch EC2 Instance**
-   - Ubuntu 22.04 LTS
-   - t3.medium or larger
-   - Security group: Allow ports 22 (SSH), 8000 (API)
+### 2. CoinGecko API
+- **Type:** REST API
+- **Authentication:** Not required
+- **Data:** Cryptocurrency pricing and market data
+- **Rate Limit:** Implemented
 
-2. **Install Dependencies**
-   ```bash
-   sudo apt update
-   sudo apt install -y docker.io docker-compose make
-   sudo systemctl start docker
-   sudo systemctl enable docker
-   ```
+### 3. CSV File
+- **Format:** CSV
+- **Source:** Local file or uploaded
+- **Processing:** Pandas-based parsing
 
-3. **Deploy Application**
-   ```bash
-   git clone <repository>
-   cd kasparro-etl-assignment
-   cp .env.example .env
-   # Edit .env with production values
-   make up
-   ```
+---
 
-4. **Set Up Cron (Alternative to Background Task)**
-   ```bash
-   crontab -e
-   # Add: */5 * * * * cd /path/to/app && docker-compose exec -T api python -m app.services.etl_runner
-   ```
+## 🔄 ETL Pipeline
 
-5. **Set Up Logging (CloudWatch)**
-   ```bash
-   # Install CloudWatch agent
-   wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
-   sudo dpkg -i amazon-cloudwatch-agent.deb
-   # Configure to ship Docker logs
-   ```
+### Incremental Ingestion
+- Checkpoint-based tracking prevents reprocessing
+- Resume from last successful point on failure
+- Idempotent writes with upsert logic
 
-6. **Nginx Reverse Proxy (Optional)**
-   ```nginx
-   server {
-       listen 80;
-       server_name your-domain.com;
-       
-       location / {
-           proxy_pass http://localhost:8000;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-       }
-   }
-   ```
+### Data Normalization
+- Unified schema across all sources
+- Identity unification (single canonical coin entity)
+- Type validation with Pydantic
+
+### Error Handling
+- Retry logic with exponential backoff
+- Detailed error logging
+- Graceful degradation
+
+---
+
+## 🧪 Testing
+```bash
+# Run all tests
+make test
+
+# Run specific test
+pytest tests/test_etl.py
+
+# Run with coverage
+pytest --cov=app tests/
+```
+
+**Test Coverage:**
+- ETL transformation logic
+- API endpoints
+- Schema validation
+- Failure scenarios
+- Incremental ingestion
+
+---
+
+## ☁️ Cloud Deployment
+
+### Platform Details
+- **Provider:** Render
+- **Service Type:** Web Service (Docker)
+- **Database:** PostgreSQL (Render managed)
+- **Region:** US-East
+- **Auto-Deploy:** Enabled from `main` branch
+
+### Deployment Configuration
+
+**Files:**
+- `render.yaml` - Render service configuration
+- `Dockerfile` - Container build instructions
+- `docker-compose.yml` - Local development setup
 
 ### Environment Variables
+Configured in Render dashboard:
+- `DATABASE_URL` - PostgreSQL connection string
+- `COINPAPRIKA_API_KEY` - API authentication
+- `COINGECKO_API_KEY` - API authentication
 
-Key production settings:
-```bash
-DATABASE_URL=postgresql://user:pass@db-host:5432/crypto_etl
-ETL_INTERVAL_SECONDS=300
-LOG_LEVEL=INFO
-COINPAPRIKA_API_KEY=your_key_here  # Optional
-COINGECKO_API_KEY=your_key_here    # Optional
+### Monitoring
+- Health checks every 5 minutes
+- Auto-restart on failure
+- Logs available in Render dashboard
+
+### ETL Scheduling
+ETL runs automatically on container startup. For continuous updates:
+- Manual trigger via container restart
+- Can be extended with cron jobs or schedulers
+
+---
+
+## 📁 Project Structure
+```
+kasparro-backend-pranav-raj/
+├── app/
+│   ├── api/
+│   │   └── endpoints.py       # API routes
+│   ├── core/
+│   │   ├── config.py          # Configuration
+│   │   ├── database.py        # DB connection
+│   │   └── models.py          # SQLAlchemy models
+│   ├── ingestion/
+│   │   ├── base.py            # Base ETL logic
+│   │   ├── coinpaprika.py     # CoinPaprika ingestion
+│   │   ├── coingecko.py       # CoinGecko ingestion
+│   │   └── csv_loader.py      # CSV ingestion
+│   ├── schemas/
+│   │   └── asset.py           # Pydantic schemas
+│   └── main.py                # FastAPI app
+├── tests/
+│   ├── test_api.py
+│   ├── test_etl.py
+│   └── test_models.py
+├── deployment-evidence/       # Deployment screenshots
+├── Dockerfile
+├── docker-compose.yml
+├── Makefile
+├── render.yaml
+├── requirements.txt
+├── DEPLOYMENT.md
+└── README.md
 ```
 
-## Project Structure
+---
 
-```
-app/
- ├── api/              # FastAPI routes
- │    ├── routes.py    # /data endpoint
- │    ├── health.py    # /health endpoint
- │    └── stats.py     # /stats endpoint
- ├── ingestion/        # Data source adapters
- │    ├── base.py      # Abstract base class
- │    ├── coinpaprika.py
- │    ├── coingecko.py
- │    └── csv_source.py
- ├── services/         # Business logic
- │    ├── etl_runner.py    # Main ETL orchestration
- │    └── checkpoint.py    # Checkpoint management
- ├── schemas/          # Pydantic models
- │    ├── unified.py   # Unified asset schema
- │    └── raw.py       # Raw data schemas
- └── core/             # Core infrastructure
-      ├── config.py    # Settings
-      ├── db.py        # Database connection
-      ├── models.py    # SQLAlchemy models
-      └── logging.py   # Logging setup
-tests/                 # Test suite
-Dockerfile
-docker-compose.yml
-Makefile
-README.md
-```
+## 👨‍💻 Author
 
-## Design Decisions
+**Pranav Raj**  
+Email: pranavchoudhary072@gmail.com  
+GitHub: [@pranavraj28](https://github.com/pranavraj28)
 
-### Why PostgreSQL?
-- ACID compliance for data integrity
-- JSONB support for flexible raw data storage
-- Mature ecosystem with excellent Python support
+---
 
-### Why Checkpoint Table vs. File-Based?
-- Database-backed checkpoints are transactional
-- Can be queried via API for observability
-- Survives container restarts
-- Enables distributed ETL in future
+## 📝 License
 
-### Why Batch Processing?
-- Reduces memory usage for large datasets
-- Allows progress tracking at batch level
-- Enables partial recovery (resume from last successful batch)
+This project was created as part of the Kasparro Backend Engineer Intern assignment.
 
-### Why Separate Raw and Unified Tables?
-- **Auditability**: Full source data preserved
-- **Reprocessing**: Can re-run normalization logic without re-fetching
-- **Debugging**: Inspect raw payloads when normalization fails
-- **Compliance**: Historical record of what was received
+---
 
-## Testing
+## 🙏 Acknowledgments
 
-Run the test suite:
-```bash
-make test
-```
+- Kasparro team for the comprehensive assignment
+- CoinPaprika and CoinGecko for API access
+- Open-source community for excellent tools
 
-Test coverage includes:
-- ✅ ETL transforms valid data correctly
-- ✅ Duplicate ingestion does not re-insert
-- ✅ Failure mid-ETL → resume works
-- ✅ /health returns DB + ETL status
-- ✅ /data pagination works
-- ✅ Failure injection and recovery
+---
 
-## Monitoring
-
-The system exposes several observability endpoints:
-
-- `/health` - Quick health check for load balancers
-- `/stats` - Detailed ETL metrics
-- Application logs - Structured logging to stdout
-
-For production, consider:
-- Prometheus metrics endpoint (future enhancement)
-- CloudWatch/DataDog integration
-- Alerting on failed ETL runs
-
-## Future Enhancements
-
-- [ ] Rate limiting on API endpoints
-- [ ] Authentication/authorization
-- [ ] WebSocket support for real-time updates
-- [ ] Additional data sources (Binance, Kraken, etc.)
-- [ ] Data quality validation rules
-- [ ] Automated schema evolution handling
-
-## License
-
-MIT
-
-## Author
-
-Built for Kasparro backend engineering assessment.
-
+**Last Updated:** December 31, 2025
