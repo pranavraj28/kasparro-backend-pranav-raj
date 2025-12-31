@@ -1,3 +1,16 @@
+## 🚀 Live Public Cloud Deployment (Verified)
+
+The backend API is deployed on Render and is publicly accessible.
+
+Base URL:
+https://kasparro-backend-agwk.onrender.com
+
+Verification Endpoints:
+- Health Check: https://kasparro-backend-agwk.onrender.com/
+- Unified Data API: https://kasparro-backend-agwk.onrender.com/data
+- Swagger API Docs: https://kasparro-backend-agwk.onrender.com/docs
+
+This deployment is live, verifiable, and reproducible using Docker.
 # Crypto ETL System
 
 A production-ready ETL system for cryptocurrency data ingestion with checkpoint-based recovery, incremental processing, and comprehensive failure handling.
