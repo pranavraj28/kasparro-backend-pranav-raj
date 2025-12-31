@@ -1,51 +1,70 @@
-# Kasparro ETL Backend — Crypto Asset Data API
+## 🚀 Live Public Cloud Deployment (Verified)
 
-This repository contains a production-ready backend service that ingests, normalizes, and serves cryptocurrency asset data from multiple sources. It is part of the Kasparro backend assignment and exposes a unified API for querying canonical asset data.
+### Why PostgreSQL?
+- ACID compliance for data integrity
+- JSONB support for flexible raw data storage
+- Mature ecosystem with excellent Python support
 
----
+### Why Checkpoint Table vs. File-Based?
+- Database-backed checkpoints are transactional
+- Can be queried via API for observability
+- Survives container restarts
+- Enables distributed ETL in future
 
-## 🚀 Live Deployment
+### Why Batch Processing?
+- Reduces memory usage for large datasets
+- Allows progress tracking at batch level
+- Enables partial recovery (resume from last successful batch)
 
-🔗 **API Base URL:**  
-https://kasparro-backend-agwk.onrender.com
+### Why Separate Raw and Unified Tables?
+- **Auditability**: Full source data preserved
+- **Reprocessing**: Can re-run normalization logic without re-fetching
+- **Debugging**: Inspect raw payloads when normalization fails
+- **Compliance**: Historical record of what was received
 
-🔗 **Swagger / OpenAPI Docs:**  
-https://kasparro-backend-agwk.onrender.com/docs
+## Testing
 
----
+Run the test suite:
+```bash
+make test
+```
 
-## 📦 Overview
+Test coverage includes:
+- ✅ ETL transforms valid data correctly
+- ✅ Duplicate ingestion does not re-insert
+- ✅ Failure mid-ETL → resume works
+- ✅ /health returns DB + ETL status
+- ✅ /data pagination works
+- ✅ Failure injection and recovery
 
-This project implements:
+## Monitoring
 
-- **Incremental ETL pipelines** for multiple data sources
-  - CoinPaprika
-  - CoinGecko (rate-limited but gracefully handled)
-  - CSV (if configured)
-- **Canonical data model**
-  - Avoids duplicate assets across sources
-  - Stored in SQLite (or configured RDBMS)
-- **REST API Endpoints**
-  - `/data` — Paginated unified asset data
-  - `/health` — Health check with ETL and DB status
-  - `/stats` — ETL run and ingestion statistics
+The system exposes several observability endpoints:
 
----
+- `/health` - Quick health check for load balancers
+- `/stats` - Detailed ETL metrics
+- Application logs - Structured logging to stdout
 
-## 📌 Core Features
+For production, consider:
+- Prometheus metrics endpoint (future enhancement)
+- CloudWatch/DataDog integration
+- Alerting on failed ETL runs
 
-### ✅ Normalized Canonical Assets
+## Future Enhancements
 
-The API returns a unified view of assets with canonical identity, ensuring that the same asset (e.g. BTC) appears once regardless of source.
+- [ ] Rate limiting on API endpoints
+- [ ] Authentication/authorization
+- [ ] WebSocket support for real-time updates
+- [ ] Additional data sources (Binance, Kraken, etc.)
+- [ ] Data quality validation rules
+- [ ] Automated schema evolution handling
 
-Example output:
+## License
 
-```json
-[
-  {
-    "symbol": "BTC",
-    "name": "Bitcoin",
-    "sources": ["coinpaprika", "coingecko"],
-    "latest_price_usd": 87593.11
-  }
-]
+MIT
+
+## Author
+
+Built for Kasparro backend engineering assessment.
+
+
